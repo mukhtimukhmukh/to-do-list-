@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Week of Oct 27</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Mono&family=Hanken+Grotesk:wght@400;600&display=swap">
+<style>
+/* layout: single column of day sections, progress up top, each task a row that opens into an edit panel */
+:root{
+  --bg:#f2f5f8;
+  --surface:#ffffff;
+  --ink:#13202f;
+  --muted:#5b6b7c;
+  --line:#d6dee7;
+  --accent:#1d4f91;
+  --accent-ink:#ffffff;
+  --accent-soft:#e1ebf7;
+  --done:#8a98a8;
+  --warn:#b4540a;
+  --font-display:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;
+  --font-body:'Hanken Grotesk','Helvetica Neue',Arial,sans-serif;
+  --font-mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1620;--surface:#14202d;--ink:#e6edf5;--muted:#95a5b6;--line:#26364a;
+    --accent:#6fa6ec;--accent-ink:#0d1620;--accent-soft:#1b2d45;--done:#667789;--warn:#e8934a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1620;--surface:#14202d;--ink:#e6edf5;--muted:#95a5b6;--line:#26364a;
+  --accent:#6fa6ec;--accent-ink:#0d1620;--accent-soft:#1b2d45;--done:#667789;--warn:#e8934a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;
+  padding-block:28px 64px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(2rem,7vw,2.9rem);line-height:1.02;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.deadline{display:inline-flex;align-self:flex-start;gap:8px;align-items:center;font-family:var(--font-mono);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--warn);border:1px solid var(--warn);padding:4px 10px;border-radius:3px}
+.progress{display:flex;flex-direction:column;gap:8px}
+.progress-row{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-mono);font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s ease}
+.status{font-size:.9rem;color:var(--muted);min-height:1.3em}
+.day{display:flex;flex-direction:column;gap:6px}
+.day-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:6px}
+.day-head h2{font-family:var(--font-display);font-size:1.35rem;margin:0;font-weight:700;letter-spacing:-.01em}
+.day-head .date{font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+.day-head .count{margin-left:auto;font-family:var(--font-mono);font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.today{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);padding:2px 7px;border-radius:3px}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+li{border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 2px}
+.check{width:26px;height:26px;border:2px solid var(--ink);border-radius:4px;background:transparent;display:grid;place-items:center;cursor:pointer;padding:0;color:transparent;margin-top:1px}
+.check svg{width:16px;height:16px}
+.check[aria-checked="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.check:disabled{cursor:default;opacity:.6}
+.body{min-width:0;display:flex;flex-direction:column;gap:2px}
+.when{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.text{font-weight:600;overflow-wrap:anywhere}
+.note{font-size:.92rem;color:var(--muted);overflow-wrap:anywhere}
+li.done .text{color:var(--done);text-decoration:line-through;text-decoration-thickness:1.5px}
+li.done .note,li.done .when{color:var(--done)}
+button{font:inherit;color:inherit}
+.link{background:none;border:0;padding:4px 6px;font-family:var(--font-mono);font-size:.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;border-radius:3px}
+.link:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.edit{grid-column:1/-1;display:grid;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;margin:0 0 12px}
+.edit label{display:grid;gap:4px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:0}
+input[type=text],select,textarea{font:inherit;font-size:1rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:100%;min-width:0;text-transform:none;letter-spacing:0}
+textarea{resize:vertical;min-height:64px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--warn);border:1px solid var(--warn)}
+.spacer{flex:1}
+.add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding-top:10px}
+.empty{padding:14px 2px;color:var(--muted);font-size:.95rem}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.bar>i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Week of Oct 27</h1>
+    <div class="deadline">Haystack due Mon Nov 2</div>
+    <div class="progress" aria-live="polite">
+      <div class="progress-row"><span id="pcount">loading</span><span id="ppct"></span></div>
+      <div class="bar"><i id="pbar"></i></div>
+    </div>
+    <div class="status" id="status"></div>
+  </header>
+  <main id="days"></main>
+</div>
+
+<script>
+/* Standalone mode: a small stand-in for the claude.ai database that saves to this browser only. */
+(function(){
+  var KEY='week-of-oct-27-v1', mem=null, subs=[];
+  var SEED=[{"id": "s0", "day": 0, "order": 10, "when": "Morning", "text": "Haystack: finalize the 150-word statement", "note": "Gather the other application pieces too.", "done": false}, {"id": "s1", "day": 0, "order": 20, "when": "2:00 pm", "text": "Class (30 min)", "note": "", "done": false}, {"id": "s2", "day": 0, "order": 30, "when": "Afternoon", "text": "STIR: type up notes from the last editorial session", "note": "Typing only, no new writing. What comes out of this decides the STIR blocks later in the week.", "done": false}, {"id": "s3", "day": 1, "order": 1010, "when": "Morning", "text": "STIR block (open)", "note": "Fill in once the notes are typed up.", "done": false}, {"id": "s4", "day": 1, "order": 1020, "when": "Afternoon", "text": "Focus session for the Substack and IG posts (about 60 min)", "note": "Decide what the posts are about, how Lagos Design Week connects to your advisory goals, and how the somatic self-respect angle fits. Leave with one sentence per piece.", "done": false}, {"id": "s5", "day": 1, "order": 1030, "when": "Evening", "text": "Concrete piece: sourcing and prep", "note": "Light slot.", "done": false}, {"id": "s6", "day": 2, "order": 2010, "when": "Morning", "text": "STIR block (open)", "note": "", "done": false}, {"id": "s7", "day": 2, "order": 2020, "when": "2:00 to 5:00 pm", "text": "Class (3 hours)", "note": "", "done": false}, {"id": "s8", "day": 2, "order": 2030, "when": "Evening", "text": "Concrete piece, or off", "note": "", "done": false}, {"id": "s9", "day": 3, "order": 3010, "when": "Morning", "text": "Prep the cyanotype tote and design", "note": "", "done": false}, {"id": "s10", "day": 3, "order": 3020, "when": "Midday", "text": "Cyanotype tote print", "note": "Use the strongest light you can get.", "done": false}, {"id": "s11", "day": 3, "order": 3030, "when": "Afternoon", "text": "IG post on the somatic self-respect angle", "note": "Written from Wednesday's focus.", "done": false}, {"id": "s12", "day": 4, "order": 4010, "when": "Morning", "text": "Draft the Lagos Design Week Substack post", "note": "", "done": false}, {"id": "s13", "day": 4, "order": 4020, "when": "Afternoon", "text": "Concrete piece (longer block)", "note": "", "done": false}, {"id": "s14", "day": 4, "order": 4030, "when": "Evening", "text": "Cut the IG clips and finish the Substack", "note": "", "done": false}, {"id": "s15", "day": 5, "order": 5010, "when": "Morning", "text": "Final read of the Haystack application and submit", "note": "Leaves Monday Nov 2 as a buffer.", "done": false}, {"id": "s16", "day": 5, "order": 5020, "when": "Rest of day", "text": "Open, for anything that slipped", "note": "", "done": false}, {"id": "s17", "day": 6, "order": 6010, "when": "", "text": "Haystack deadline (buffer day)", "note": "Only if it was not submitted Sunday.", "done": false}];
+  function load(){
+    if(mem) return mem;
+    try{ var raw=localStorage.getItem(KEY); if(raw){ mem=JSON.parse(raw); return mem; } }catch(e){}
+    mem=SEED.slice(); return mem;
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(mem)); }catch(e){} }
+  function snap(){
+    var rows=load().slice().sort(function(a,b){return a.order-b.order;});
+    return { docs: rows.map(function(r){ var v=Object.assign({},r); delete v.id; return {id:r.id, exists:true, data:function(){return v;}}; }) };
+  }
+  function notify(){ save(); subs.forEach(function(f){ f(snap()); }); }
+  function find(id){ return load().findIndex(function(x){return x.id===id;}); }
+  var db={
+    doc:function(path){ var id=path.split('/')[1]; return {
+      update:function(p){ var i=find(id); if(i<0) return Promise.reject({code:'invalid_argument'}); Object.assign(mem[i],p); notify(); return Promise.resolve(); },
+      delete:function(){ var i=find(id); if(i>=0) mem.splice(i,1); notify(); return Promise.resolve(); } }; },
+    collection:function(){ return {
+      add:function(d){ load(); mem.push(Object.assign({id:'n'+Date.now()+Math.floor(Math.random()*1000)},d)); notify(); return Promise.resolve(); },
+      orderBy:function(){ return { onSnapshot:function(next){ subs.push(next); setTimeout(function(){ next(snap()); },0); return function(){}; } }; } }; }
+  };
+  window.claude={ use:function(n){ return Promise.resolve(n==='db'?db:null); } };
+})();
+</script>
+<script>
+(function(){
+  var BASE = new Date(2026, 9, 27);
+  var DAY_NAMES = ['Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday','Monday'];
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var items = [], db = null, readOnly = false, loaded = false;
+  var editing = null, confirmDel = null, pendingRender = false, busy = {};
+  var daysEl = document.getElementById('days');
+
+  function dayDate(i){ var d = new Date(BASE.getTime()); d.setDate(BASE.getDate()+i); return d; }
+  function dayLabel(i){ var d = dayDate(i); return MONTHS[d.getMonth()]+' '+d.getDate(); }
+  function isToday(i){
+    try { var n = new Date(), d = dayDate(i);
+      return n.getFullYear()===d.getFullYear() && n.getMonth()===d.getMonth() && n.getDate()===d.getDate();
+    } catch(e){ return false; }
+  }
+  function setStatus(t){ document.getElementById('status').textContent = t || ''; }
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text!=null) e.textContent = text; return e; }
+
+  function renderIfIdle(){
+    var a = document.activeElement;
+    if (a && daysEl.contains(a) && (a.tagName==='INPUT' || a.tagName==='TEXTAREA' || a.tagName==='SELECT')) { pendingRender = true; return; }
+    pendingRender = false; render();
+  }
+  document.addEventListener('focusout', function(){ setTimeout(function(){ if(pendingRender) renderIfIdle(); }, 0); });
+
+  function guard(id, fn){
+    if (busy[id]) return Promise.resolve();
+    busy[id] = true;
+    return Promise.resolve().then(fn).catch(function(e){
+      setStatus(e && e.code==='invalid_argument' ? 'This page is read-only for you.' : 'That change did not save. Try again.');
+      if (e && e.code==='invalid_argument') { readOnly = true; render(); }
+    }).then(function(){ busy[id] = false; });
+  }
+
+  function toggle(it){
+    if (!db || readOnly) return;
+    guard(it.id, function(){ return db.doc('items/'+it.id).update({done: !it.done}); });
+  }
+  function saveEdit(it, vals){
+    var patch = { text: vals.text, when: vals.when, note: vals.note };
+    if (vals.day !== it.day) {
+      var mx = vals.day*1000;
+      items.forEach(function(x){ if (x.day===vals.day && x.order>mx) mx = x.order; });
+      patch.day = vals.day; patch.order = mx+10;
+    }
+    editing = null;
+    guard(it.id, function(){ return db.doc('items/'+it.id).update(patch); });
+  }
+  function removeItem(it){
+    editing = null; confirmDel = null;
+    guard(it.id, function(){ return db.doc('items/'+it.id).delete(); });
+  }
+  function move(it, dir){
+    var sibs = items.filter(function(x){ return x.day===it.day; }).sort(function(a,b){ return a.order-b.order; });
+    var i = sibs.findIndex(function(x){ return x.id===it.id; }), j = i+dir;
+    if (j<0 || j>=sibs.length) return;
+    var other = sibs[j];
+    guard(it.id, function(){
+      return db.doc('items/'+it.id).update({order: other.order})
+        .then(function(){ return db.doc('items/'+other.id).update({order: it.order}); });
+    });
+  }
+  function addItem(day, text){
+    var mx = day*1000;
+    items.forEach(function(x){ if (x.day===day && x.order>mx) mx = x.order; });
+    return db.collection('items').add({day: day, order: mx+10, when: '', text: text, note: '', done: false})
+      .catch(function(e){ setStatus(e && e.code==='quota_exceeded' ? 'The list is full. Delete something first.' : 'That did not save. Try again.'); });
+  }
+
+  var CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.5"/></svg>';
+
+  function buildRow(it){
+    var li = el('li', it.done ? 'done' : '');
+    var row = el('div','row');
+    var cb = el('button','check');
+    cb.type='button'; cb.setAttribute('role','checkbox'); cb.setAttribute('aria-checked', it.done ? 'true':'false');
+    cb.setAttribute('aria-label', it.text); cb.innerHTML = CHECK; cb.disabled = readOnly || !db;
+    cb.addEventListener('click', function(){ toggle(it); });
+    var body = el('div','body');
+    if (it.when) body.appendChild(el('span','when',it.when));
+    body.appendChild(el('span','text',it.text));
+    if (it.note) body.appendChild(el('span','note',it.note));
+    row.appendChild(cb); row.appendChild(body);
+    if (!readOnly && db) {
+      var eb = el('button','link','edit'); eb.type='button';
+      eb.addEventListener('click', function(){ editing = it.id; confirmDel = null; render(); });
+      row.appendChild(eb);
+    } else row.appendChild(el('span'));
+    li.appendChild(row);
+    if (editing === it.id) li.appendChild(buildEditor(it));
+    return li;
+  }
+
+  function buildEditor(it){
+    var f = el('form','edit');
+    function field(label, node){ var l = el('label'); l.appendChild(document.createTextNode(label)); l.appendChild(node); return l; }
+    var text = el('input'); text.type='text'; text.value = it.text; text.id='e-text-'+it.id;
+    var when = el('input'); when.type='text'; when.value = it.when || ''; when.id='e-when-'+it.id; when.placeholder='morning, 2:00 pm, evening';
+    var note = el('textarea'); note.value = it.note || ''; note.id='e-note-'+it.id;
+    var day = el('select'); day.id='e-day-'+it.id;
+    DAY_NAMES.forEach(function(n,i){ var o = el('option',null,n+' '+dayLabel(i)); o.value = i; if (i===it.day) o.selected = true; day.appendChild(o); });
+    var two = el('div','two'); two.appendChild(field('When', when)); two.appendChild(field('Day', day));
+    f.appendChild(field('Task', text)); f.appendChild(two); f.appendChild(field('Note', note));
+    var act = el('div','actions');
+    var save = el('button','btn','Save'); save.type='submit';
+    var cancel = el('button','btn ghost','Cancel'); cancel.type='button';
+    cancel.addEventListener('click', function(){ editing = null; confirmDel = null; render(); });
+    var up = el('button','btn ghost','Move up'); up.type='button';
+    up.addEventListener('click', function(){ move(it,-1); });
+    var dn = el('button','btn ghost','Move down'); dn.type='button';
+    dn.addEventListener('click', function(){ move(it,1); });
+    act.appendChild(save); act.appendChild(cancel); act.appendChild(up); act.appendChild(dn); act.appendChild(el('span','spacer'));
+    var del = el('button','btn danger', confirmDel===it.id ? 'Delete for good' : 'Delete'); del.type='button';
+    del.addEventListener('click', function(){
+      if (confirmDel===it.id) removeItem(it); else { confirmDel = it.id; render(); }
+    });
+    act.appendChild(del); f.appendChild(act);
+    f.addEventListener('submit', function(e){
+      e.preventDefault();
+      var t = text.value.trim(); if (!t) { text.focus(); return; }
+      saveEdit(it, {text:t, when:when.value.trim(), note:note.value.trim(), day:parseInt(day.value,10)});
+    });
+    return f;
+  }
+
+  function render(){
+    daysEl.textContent = '';
+    var total = items.length, done = items.filter(function(x){ return x.done; }).length;
+    document.getElementById('pcount').textContent = loaded ? (done+' of '+total+' done') : 'loading';
+    document.getElementById('ppct').textContent = total ? Math.round(done/total*100)+'%' : '';
+    document.getElementById('pbar').style.width = total ? (done/total*100)+'%' : '0';
+
+    if (loaded && !db) {
+      daysEl.appendChild(el('p','empty','This checklist saves to your claude.ai account. Open it while signed in to see and change your tasks.'));
+      return;
+    }
+    if (loaded && total===0 && !readOnly) {
+      daysEl.appendChild(el('p','empty','No tasks yet. Add one under any day below.'));
+    }
+    for (var d=0; d<DAY_NAMES.length; d++) (function(d){
+      var list = items.filter(function(x){ return x.day===d; }).sort(function(a,b){ return a.order-b.order; });
+      var sec = el('section','day');
+      var head = el('div','day-head');
+      head.appendChild(el('h2',null,DAY_NAMES[d]));
+      head.appendChild(el('span','date',dayLabel(d)));
+      if (isToday(d)) head.appendChild(el('span','today','today'));
+      var c = list.filter(function(x){return x.done;}).length;
+      head.appendChild(el('span','count', list.length ? c+'/'+list.length : ''));
+      sec.appendChild(head);
+      var ul = el('ul');
+      list.forEach(function(it){ ul.appendChild(buildRow(it)); });
+      sec.appendChild(ul);
+      if (loaded && db && !readOnly) {
+        var f = el('form','add');
+        var inp = el('input'); inp.type='text'; inp.id='add-'+d; inp.placeholder='Add to '+DAY_NAMES[d]; inp.setAttribute('aria-label','Add a task to '+DAY_NAMES[d]);
+        var b = el('button','btn ghost','Add'); b.type='submit';
+        f.appendChild(inp); f.appendChild(b);
+        f.addEventListener('submit', function(e){
+          e.preventDefault(); var t = inp.value.trim(); if(!t) return; inp.value=''; addItem(d,t);
+        });
+        sec.appendChild(f);
+      }
+      daysEl.appendChild(sec);
+    })(d);
+  }
+
+  function start(){
+    render();
+    if (!window.claude || !window.claude.use) { loaded = true; render(); return; }
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function(r){
+      db = r[0];
+      var user = r[1];
+      if (user && user.can && user.can('data.write') === false) readOnly = true;
+      if (!db) { loaded = true; render(); return; }
+      db.collection('items').orderBy('order').onSnapshot(function(snap){
+        items = snap.docs.map(function(d){ var v = d.data() || {}; return {
+          id: d.id, day: typeof v.day==='number' ? v.day : 0, order: typeof v.order==='number' ? v.order : 0,
+          when: v.when || '', text: v.text || '', note: v.note || '', done: !!v.done }; });
+        loaded = true; renderIfIdle();
+      }, function(){ loaded = true; setStatus('Live updates stopped. Reload the page to reconnect.'); render(); });
+    }).catch(function(){ loaded = true; render(); });
+  }
+  start();
+})();
+</script>
+
+</html>
